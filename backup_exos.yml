@@ -44,7 +44,9 @@
 
     - name: Display current working directory
       ansible.builtin.debug:
-        msg: "{{ pwd_output.stdout[0] }}"- name: Create local backup directory
+        msg: "{{ pwd_output.stdout[0] }}"
+        
+    - name: Create local backup directory
       ansible.builtin.file:
         path: "{{ backup_dir }}"
         state: directory
