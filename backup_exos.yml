@@ -6,6 +6,7 @@
   vars:
     ansible_network_os: community.network.exos
     backup_dir: "./backups/{{ inventory_hostname }}"
+    primary_remote_path: "/usr/local/cfg/primary.cfg"  # Confirmed EXOS path
 
   tasks:
     - name: Get current timestamp on localhost
@@ -19,45 +20,28 @@
       ansible.builtin.set_fact:
         timestamp: "{{ local_facts.ansible_facts.ansible_date_time.iso8601_basic_short }}"
 
-    - name: Verify connectivity - Run 'show switch' command
+    - name: Verify config file (check if primary.cfg is selected)
       community.network.exos_command:
         commands: show switch
-      register: show_switch_output
+      register: show_switch
 
-    - name: Display 'show switch' output (confirms login and basic command execution)
+    - name: Display 'show switch' output (look for 'Config Selected: primary.cfg')
       ansible.builtin.debug:
-        msg: "{{ show_switch_output.stdout_lines }}"
+        msg: "{{ show_switch.stdout_lines }}"
 
-    - name: Verify filesystem - Run 'ls' command (should list primary.cfg if in correct dir)
-      community.network.exos_command:
-        commands: ls
-      register: ls_output
-
-    - name: Display 'ls' output (look for primary.cfg)
-      ansible.builtin.debug:
-        msg: "{{ ls_output.stdout_lines }}"
-
-    - name: Verify current directory - Run 'pwd' command
-      community.network.exos_command:
-        commands: pwd
-      register: pwd_output
-
-    - name: Display current working directory
-      ansible.builtin.debug:
-        msg: "{{ pwd_output.stdout[0] }}"
-        
     - name: Create local backup directory
       ansible.builtin.file:
         path: "{{ backup_dir }}"
         state: directory
       delegate_to: localhost
 
-    - name: Copy primary.cfg from switch via SCP using relative filename
+    - name: Copy primary.cfg from switch via SCP
       ansible.builtin.fetch:
-        src: primary.cfg
+        src: "{{ primary_remote_path }}"
         dest: "{{ backup_dir }}/primary_{{ timestamp }}.cfg"
         flat: yes
       delegate_to: localhost
+      ignore_errors: true  # To continue if file missing
 
     - name: Run 'show configuration' and save output
       community.network.exos_command:
@@ -80,12 +64,3 @@
         content: "{{ show_config_detail.stdout[0] }}"
         dest: "{{ backup_dir }}/show_config_detail_{{ timestamp }}.txt"
       delegate_to: localhost
-
-    - name: Debug - List files in current directory on switch
-      community.network.exos_command:
-        commands: ls
-      register: ls_output
-
-    - name: Display ls output
-      ansible.builtin.debug:
-        msg: "{{ ls_output.stdout_lines }}"
