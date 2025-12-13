@@ -1,0 +1,52 @@
+---
+- name: Backup EXOS switch primary.cfg via SCP and save show configuration
+  hosts: exos_switches
+  gather_facts: no
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: community.network.exos
+    ansible_user: admin                          # Adjust if using a different user
+    ansible_ssh_pass: "{{ switch_password }}"    # Recommended: use vault or --ask-pass
+    ansible_become: yes
+    ansible_become_method: enable
+    ansible_become_pass: "{{ enable_password }}" # Recommended: use vault
+    backup_dir: "./backups/{{ inventory_hostname }}"
+    timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+    primary_remote_path: "/config/primary.cfg"    # Standard location on EXOS
+
+  tasks:
+    - name: Create local backup directory
+      ansible.builtin.file:
+        path: "{{ backup_dir }}"
+        state: directory
+      delegate_to: localhost
+
+    - name: Copy primary.cfg from switch via SCP
+      ansible.builtin.fetch:
+        src: "{{ primary_remote_path }}"
+        dest: "{{ backup_dir }}/primary_{{ timestamp }}.cfg"
+        flat: yes
+      delegate_to: localhost
+      # fetch uses the same SSH connection credentials as the playbook
+
+    - name: Run 'show configuration' and save output
+      community.network.exos_command:
+        commands: show configuration
+      register: show_config
+
+    - name: Save 'show configuration' output to file
+      ansible.builtin.copy:
+        content: "{{ show_config.stdout[0] }}"
+        dest: "{{ backup_dir }}/show_config_{{ timestamp }}.txt"
+      delegate_to: localhost
+
+    - name: Run 'show configuration detail' (more complete, includes defaults)
+      community.network.exos_command:
+        commands: show configuration detail
+      register: show_config_detail
+
+    - name: Save 'show configuration detail' output to file
+      ansible.builtin.copy:
+        content: "{{ show_config_detail.stdout[0] }}"
+        dest: "{{ backup_dir }}/show_config_detail_{{ timestamp }}.txt"
+      delegate_to: localhost
