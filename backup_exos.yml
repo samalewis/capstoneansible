@@ -53,3 +53,12 @@
         content: "{{ show_config_detail.stdout[0] }}"
         dest: "{{ backup_dir }}/show_config_detail_{{ timestamp }}.txt"
       delegate_to: localhost
+
+    - name: Debug - List files in current directory on switch
+      community.network.exos_command:
+        commands: ls
+      register: ls_output
+
+    - name: Display ls output
+      ansible.builtin.debug:
+        msg: "{{ ls_output.stdout_lines }}"
