@@ -7,9 +7,9 @@
     ansible_network_os: community.network.exos
     ansible_user: admin                          # Adjust if using a different user
     ansible_ssh_pass: "{{ switch_password }}"    # Recommended: use vault or --ask-pass
-    ansible_become: yes
-    ansible_become_method: enable
-    ansible_become_pass: "{{ enable_password }}" # Recommended: use vault
+    ansible_become: no
+    #ansible_become_method: enable
+    #ansible_become_pass: "{{ enable_password }}" # Recommended: use vault
     backup_dir: "./backups/{{ inventory_hostname }}"
     timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
     primary_remote_path: "/config/primary.cfg"    # Standard location on EXOS
