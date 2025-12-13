@@ -25,7 +25,7 @@
         commands: show switch
       register: show_switch
 
-    - name: Display 'show switch' output (look for 'Config Selected: primary.cfg')
+    - name: Display 'show switch' output to look for 'Config Selected: primary.cfg'
       ansible.builtin.debug:
         msg: "{{ show_switch.stdout_lines }}"
 
