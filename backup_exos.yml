@@ -6,7 +6,6 @@
   vars:
     ansible_network_os: community.network.exos
     backup_dir: "./backups/{{ inventory_hostname }}"
-    primary_remote_path: "/usr/local/cfg/primary.cfg"  # Correct internal path on EXOS
 
   tasks:
     - name: Get current timestamp on localhost
@@ -26,9 +25,9 @@
         state: directory
       delegate_to: localhost
 
-    - name: Copy primary.cfg from switch via SCP
+    - name: Copy primary.cfg from switch via SCP using relative filename
       ansible.builtin.fetch:
-        src: "{{ primary_remote_path }}"
+        src: primary.cfg
         dest: "{{ backup_dir }}/primary_{{ timestamp }}.cfg"
         flat: yes
       delegate_to: localhost
