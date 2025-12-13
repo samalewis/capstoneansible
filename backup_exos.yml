@@ -6,7 +6,7 @@
   vars:
     ansible_network_os: community.network.exos
     backup_dir: "./backups/{{ inventory_hostname }}"
-    primary_remote_path: "/config/primary.cfg"    # Standard path on EXOS
+    primary_remote_path: "/usr/local/cfg/primary.cfg"  # Correct internal path on EXOS
 
   tasks:
     - name: Get current timestamp on localhost
