@@ -19,7 +19,32 @@
       ansible.builtin.set_fact:
         timestamp: "{{ local_facts.ansible_facts.ansible_date_time.iso8601_basic_short }}"
 
-    - name: Create local backup directory
+    - name: Verify connectivity - Run 'show switch' command
+      community.network.exos_command:
+        commands: show switch
+      register: show_switch_output
+
+    - name: Display 'show switch' output (confirms login and basic command execution)
+      ansible.builtin.debug:
+        msg: "{{ show_switch_output.stdout_lines }}"
+
+    - name: Verify filesystem - Run 'ls' command (should list primary.cfg if in correct dir)
+      community.network.exos_command:
+        commands: ls
+      register: ls_output
+
+    - name: Display 'ls' output (look for primary.cfg)
+      ansible.builtin.debug:
+        msg: "{{ ls_output.stdout_lines }}"
+
+    - name: Verify current directory - Run 'pwd' command
+      community.network.exos_command:
+        commands: pwd
+      register: pwd_output
+
+    - name: Display current working directory
+      ansible.builtin.debug:
+        msg: "{{ pwd_output.stdout[0] }}"- name: Create local backup directory
       ansible.builtin.file:
         path: "{{ backup_dir }}"
         state: directory
