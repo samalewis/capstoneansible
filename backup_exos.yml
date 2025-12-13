@@ -37,7 +37,7 @@
 
     - name: Copy primary.cfg from switch via SCP
       ansible.builtin.fetch:
-        src: "{{ primary_remote_path }}"
+        src: primary.cfg
         dest: "{{ backup_dir }}/primary_{{ timestamp }}.cfg"
         flat: yes
       delegate_to: localhost
