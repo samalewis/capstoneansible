@@ -37,13 +37,13 @@ set BEFORE_BANNER [list \
 
 # Changed to standard ASCII characters to prevent encoding errors
 set AFTER_BANNER [list \
-    +----------------------------------------------------------------------+
-    |                 CAPSTONE LABS CORE SWITCH - CORE-02                  |
-    +----------------------------------------------------------------------+
-    |            Unauthorized changes are strictly prohibited.             |
-    |      All configuration changes must be approved and documented.      |
-    |         This device is actively monitored. Save your work!           |
-    +----------------------------------------------------------------------+
++----------------------------------------------------------------------+
+|                 CAPSTONE LABS CORE SWITCH - CORE-02                  |
++----------------------------------------------------------------------+
+|            Unauthorized changes are strictly prohibited.             |
+|      All configuration changes must be approved and documented.      |
+|         This device is actively monitored. Save your work!           |
++----------------------------------------------------------------------+
 ]
 
 set timeout 30
