@@ -35,15 +35,15 @@ set BEFORE_BANNER [list \
     "***********************************************************************" \
 ]
 
-# Note: If these special characters look weird on the switch, change 
-# '╔' to '+' and '═' to '-'
+# Changed to standard ASCII characters to prevent encoding errors
 set AFTER_BANNER [list \
-    "╔══════════════════════════════════════════════════════════════════════╗" \
-    "║                 CAPSTONE LABS CORE SWITCH - CORE-02                  ║" \
-    "╠══════════════════════════════════════════════════════════════════════╣" \
-    "║  Unauthorized changes are strictly prohibited.                       ║" \
-    "║  All configuration changes must be approved and documented.          ║" \
-    "╚══════════════════════════════════════════════════════════════════════╝" \
+    "+----------------------------------------------------------------------+" \
+    "|                 CAPSTONE LABS CORE SWITCH - CORE-02                  |" \
+    "+----------------------------------------------------------------------+" \
+    "|  Unauthorized changes are strictly prohibited.                       |" \
+    "|  All configuration changes must be approved and documented.          |" \
+    "|  This device is actively monitored. Save your work!                  |" \
+    "+----------------------------------------------------------------------+" \
 ]
 
 set timeout 30
@@ -59,33 +59,32 @@ expect {
 # --- Deploy Before-Login Banner ---
 expect "#"
 send "configure banner before-login\r"
+# Wait for banner input mode
 sleep 1
+
 foreach line $BEFORE_BANNER {
     send "$line\r"
 }
-# Send ONE return to finish the last line of text
-send "\r"
-# Wait briefly to ensure the line is processed
-sleep 0.5
-# Send SECOND return to tell EXOS we are done with the banner
+
+# Finish the banner by sending ONE blank line
 send "\r"
 
-# CRITICAL FIX: Wait for the prompt specifically before moving on
+# Wait for the prompt to return (confirming banner closed)
 expect "#"
-# Sleep to flush any lingering newlines from the buffer
-sleep 2
 
 # --- Deploy After-Login Banner ---
 send "configure banner after-login\r"
-# Wait specifically for the switch to enter input mode
-sleep 2
+# Wait for banner input mode
+sleep 1
 
 foreach line $AFTER_BANNER {
     send "$line\r"
 }
+
+# Finish the banner by sending ONE blank line
 send "\r"
-sleep 0.5
-send "\r"
+
+# Wait for the prompt
 expect "#"
 
 # --- Save and Exit ---
