@@ -23,14 +23,14 @@ set PASSWORD ""
 set BEFORE_BANNER [list \
     ***********************************************************************
     *                                                                     *
-    *            WARNING: UNAUTHORIZED ACCESS IS PROHIBITED               *
+    *  WARNING: UNAUTHORIZED ACCESS IS PROHIBITED                         *
     *                                                                     *
     *  This system is property of Capstone Labs. All activity is          *
     *  monitored and logged. Unauthorized use is a violation of federal   *
     *  and state laws (18 USC 1030, etc.) and may result in criminal      *
     *  prosecution.                                                       *
     *                                                                     *
-    *            https://capstonelabs.net/security-policy                 *
+    *  https://capstonelabs.net/security-policy                           *
     *                                                                     *
     ***********************************************************************
 ]
@@ -40,9 +40,9 @@ set AFTER_BANNER [list \
     +----------------------------------------------------------------------+
     |                 CAPSTONE LABS CORE SWITCH - CORE-02                  |
     +----------------------------------------------------------------------+
-    |  Unauthorized changes are strictly prohibited.                       |
-    |  All configuration changes must be approved and documented.          |
-    |  This device is actively monitored. Save your work!                  |
+    |            Unauthorized changes are strictly prohibited.             |
+    |      All configuration changes must be approved and documented.      |
+    |         This device is actively monitored. Save your work!           |
     +----------------------------------------------------------------------+
 ]
 
