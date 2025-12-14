@@ -23,14 +23,14 @@ set PASSWORD ""
 set BEFORE_BANNER [list \
     ***********************************************************************
     *                                                                     *
-    *  WARNING: UNAUTHORIZED ACCESS IS PROHIBITED                         *
+    *            WARNING: UNAUTHORIZED ACCESS IS PROHIBITED               *
     *                                                                     *
     *  This system is property of Capstone Labs. All activity is          *
     *  monitored and logged. Unauthorized use is a violation of federal   *
     *  and state laws (18 USC 1030, etc.) and may result in criminal      *
     *  prosecution.                                                       *
     *                                                                     *
-    *  https://capstonelabs.net/security-policy                           *
+    *            https://capstonelabs.net/security-policy                 *
     *                                                                     *
     ***********************************************************************
 ]
