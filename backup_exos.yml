@@ -1,38 +1,4 @@
-Based on the playbook and log you provided, there are three main issues preventing the backup from working correctly. The most critical one—likely causing the job to hang or fail silently—is related to SSH host key verification in your manual SCP command.
 
-Here is the diagnosis and the corrected playbook.
-
-The Issues
-
-Variable Mismatch (Critical Syntax Error)
-
-Your Code: You register the output of the SCP command to scp_result, but in the debug task immediately following, you try to print scp_manual.
-
-Result: The playbook will crash with an "undefined variable" error when it tries to print the debug message.
-
-SSH Host Key Checking (Hanging)
-
-The Problem: The scp command is running outside of Ansible's connection manager (via delegate_to: localhost). It does not know about the switch's SSH host key.
-
-Result: The command will hang indefinitely asking: "The authenticity of host 'x.x.x.x' can't be established... Are you sure you want to continue connecting (yes/no)?". Since Semaphore is non-interactive, it hangs until it times out.
-
-Fix: You must add -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null to the SCP command options.
-
-File Path Precision
-
-The Problem: While primary.cfg often works, Extreme EXOS can be particular about paths.
-
-Fix: It is safer to use the full path admin@{{ ansible_host }}:/usr/local/cfg/primary.cfg to ensure SCP finds the file.
-
-Corrected Playbook
-
-Here is the fully fixed playbook. Replace your current manual SCP task and Debug task with this updated logic.
-
-code
-Yaml
-download
-content_copy
-expand_less
 ---
 - name: Install sshpass if missing (idempotent)
   hosts: localhost
@@ -70,19 +36,19 @@ expand_less
         mode: '0755'
       delegate_to: localhost
 
-    - name: Pull primary.cfg using SCP with sshpass (Automated)
+- name: Pull primary.cfg using SCP with sshpass (fully automated)
       ansible.builtin.command: >-
-        sshpass -p '{{ ansible_ssh_password }}' 
-        scp -o HostKeyAlgorithms=+ssh-rsa 
-        -o PubkeyAcceptedKeyTypes=+ssh-rsa 
-        -o StrictHostKeyChecking=no 
-        -o UserKnownHostsFile=/dev/null 
-        admin@{{ ansible_host }}:/usr/local/cfg/primary.cfg 
+        sshpass -p '{{ ansible_ssh_password }}'
+        scp 
+        -o HostKeyAlgorithms=+ssh-rsa
+        -o PubkeyAcceptedKeyTypes=+ssh-rsa
+        -o StrictHostKeyChecking=no
+        -o UserKnownHostsFile=/dev/null
+        admin@{{ ansible_host }}:primary.cfg
         {{ backup_dir }}/primary_{{ timestamp }}.cfg
       delegate_to: localhost
-      no_log: true # Keeps password out of logs
+      no_log: true
       register: scp_result
-      # ignore_errors: yes # Uncomment if you want the play to continue even if SCP fails
 
     - name: Confirm SCP success
       ansible.builtin.debug:
