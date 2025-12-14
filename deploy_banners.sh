@@ -21,33 +21,33 @@ set USERNAME "admin"
 set PASSWORD "" 
 
 set BEFORE_BANNER [list \
-    ***********************************************************************
-    *                                                                     *
-    *  WARNING: UNAUTHORIZED ACCESS IS PROHIBITED                         *
-    *                                                                     *
-    *  This system is property of Capstone Labs. All activity is          *
-    *  monitored and logged. Unauthorized use is a violation of federal   *
-    *  and state laws (18 USC 1030, etc.) and may result in criminal      *
-    *  prosecution.                                                       *
-    *                                                                     *
-    *  https://capstonelabs.net/security-policy                           *
-    *                                                                     *
-    ***********************************************************************
+    "***********************************************************************" \
+    "*                                                                     *" \
+    "*  WARNING: UNAUTHORIZED ACCESS IS PROHIBITED                         *" \
+    "*                                                                     *" \
+    "*  This system is property of Capstone Labs. All activity is          *" \
+    "*  monitored and logged. Unauthorized use is a violation of federal   *" \
+    "*  and state laws (18 USC 1030, etc.) and may result in criminal      *" \
+    "*  prosecution.                                                       *" \
+    "*                                                                     *" \
+    "*  https://capstonelabs.net/security-policy                           *" \
+    "*                                                                     *" \
+    "***********************************************************************" \
 ]
 
-# Changed to standard ASCII characters to prevent encoding errors
 set AFTER_BANNER [list \
-    +----------------------------------------------------------------------+
-    |                 CAPSTONE LABS CORE SWITCH - CORE-02                  |
-    +----------------------------------------------------------------------+
-    |            Unauthorized changes are strictly prohibited.             |
-    |      All configuration changes must be approved and documented.      |
-    |         This device is actively monitored. Save your work!           |
-    +----------------------------------------------------------------------+
+    "+----------------------------------------------------------------------+" \
+    "|                 CAPSTONE LABS CORE SWITCH - CORE-02                  |" \
+    "+----------------------------------------------------------------------+" \
+    "|  Unauthorized changes are strictly prohibited.                       |" \
+    "|  All configuration changes must be approved and documented.          |" \
+    "|  This device is actively monitored. Save your work!                  |" \
+    "+----------------------------------------------------------------------+" \
 ]
 
 set timeout 30
 
+# Connect
 spawn ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa $USERNAME@$SWITCH_IP
 
 expect {
@@ -56,35 +56,44 @@ expect {
   timeout { puts "Timeout awaiting prompt"; exit 1 }
 }
 
-# --- Deploy Before-Login Banner ---
+# Wait for initial prompt to be stable
 expect "#"
-send "configure banner before-login\r"
-# Wait for banner input mode
-sleep 1
 
+# ------------------------------------------------------------------
+# STRATEGY: THE "SECURECRT PASTE" METHOD
+# Instead of sending line-by-line and waiting for prompts (which fails),
+# we build one giant string and send it all at once. 
+# This forces the switch to buffer the input just like a paste.
+# ------------------------------------------------------------------
+
+# 1. Start with the first command
+set paste_buffer "configure banner before-login\r"
+
+# 2. Add the first banner lines
 foreach line $BEFORE_BANNER {
-    send "$line\r"
+    append paste_buffer "$line\r"
 }
+# 3. Add the blank line to Exit Banner 1
+append paste_buffer "\r"
 
-# Finish the banner by sending ONE blank line
-send "\r"
+# 4. Add the second command IMMEDIATELY (No waiting!)
+append paste_buffer "configure banner after-login\r"
 
-# Wait for the prompt to return (confirming banner closed)
-expect "#"
-
-# --- Deploy After-Login Banner ---
-send "configure banner after-login\r"
-# Wait for banner input mode
-sleep 1
-
+# 5. Add the second banner lines
 foreach line $AFTER_BANNER {
-    send "$line\r"
+    append paste_buffer "$line\r"
 }
+# 6. Add the blank line to Exit Banner 2
+append paste_buffer "\r"
 
-# Finish the banner by sending ONE blank line
-send "\r"
+# 7. SEND IT ALL AT ONCE
+send "$paste_buffer"
 
-# Wait for the prompt
+# ------------------------------------------------------------------
+# NOW we wait. The switch will process the buffer and eventually
+# return to the prompt after finishing both banners.
+# ------------------------------------------------------------------
+
 expect "#"
 
 # --- Save and Exit ---
