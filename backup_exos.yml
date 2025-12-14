@@ -1,3 +1,24 @@
+The hang happens because ssh -tt creates a fake terminal that expects an interactive user to disconnect, and the pipe logic is causing a deadlock where Ansible waits for the connection to close, but the switch is waiting for input.
+
+We need to disable the pseudo-terminal (using -T) so SSH behaves like a simple data stream (like SCP) rather than an interactive shell. This usually fixes hangs and removes the need for exit commands.
+
+Here is the corrected playbook.
+
+Key Changes
+
+Replaced -tt with -T: This tells SSH "I am not a terminal." This prevents the switch from paginating (usually) and ensures the session closes immediately when the command finishes.
+
+Removed exit: When running non-interactively, the shell closes automatically after the last command.
+
+Increased Timeout: Added timeout 300 (Linux command) before sshpass. This ensures that if the switch does hang again, the specific task will fail after 5 minutes instead of hanging the whole job forever.
+
+Simplified Command: We execute disable clipaging; show configuration as a single argument string.
+
+code
+Yaml
+download
+content_copy
+expand_less
 ---
 - name: Backup EXOS switch primary.cfg and show configuration (Pure Shell)
   hosts: exos_switches
@@ -25,7 +46,7 @@
       delegate_to: localhost
 
     # -----------------------------------------------------------------------
-    # TASK 1: SCP THE FILE (Already working)
+    # TASK 1: SCP THE FILE
     # -----------------------------------------------------------------------
     - name: Pull primary.cfg using SCP
       ansible.builtin.shell: >-
@@ -35,6 +56,7 @@
         -o PubkeyAcceptedKeyTypes=+ssh-rsa
         -o StrictHostKeyChecking=no
         -o UserKnownHostsFile=/dev/null
+        -o LogLevel=ERROR
         admin@{{ ansible_host }}:primary.cfg
         {{ backup_dir }}/primary_{{ timestamp }}.cfg
       environment:
@@ -48,49 +70,66 @@
       when: scp_result.rc == 0
 
     # -----------------------------------------------------------------------
-    # TASK 2: SHOW CONFIGURATION (Fixed Hang)
+    # TASK 2: SHOW CONFIGURATION (Non-Interactive Mode)
+    # Using -T to disable pseudo-tty prevents hangs.
     # -----------------------------------------------------------------------
     - name: Run 'show configuration' via SSH
       ansible.builtin.shell: >-
-        printf "disable clipaging\nshow configuration\nexit\n" | 
+        timeout 300 
         sshpass -e 
-        ssh -tt 
+        ssh -T 
         -o HostKeyAlgorithms=+ssh-rsa 
         -o PubkeyAcceptedKeyTypes=+ssh-rsa 
         -o StrictHostKeyChecking=no 
         -o UserKnownHostsFile=/dev/null 
-        admin@{{ ansible_host }}
+        -o LogLevel=ERROR 
+        admin@{{ ansible_host }} 
+        "disable clipaging; show configuration"
       environment:
         SSHPASS: "{{ ansible_password }}"
       delegate_to: localhost
       register: show_config_raw
+      # Don't fail immediately if this doesn't work, so we can see the debug
+      ignore_errors: yes
+
+    - name: Debug Output (If Failed)
+      ansible.builtin.debug:
+        msg: 
+          - "Return Code: {{ show_config_raw.rc }}"
+          - "Error: {{ show_config_raw.stderr }}"
+      when: show_config_raw.rc != 0
 
     - name: Save 'show configuration' output
       ansible.builtin.copy:
         content: "{{ show_config_raw.stdout }}"
         dest: "{{ backup_dir }}/show_config_{{ timestamp }}.txt"
       delegate_to: localhost
+      when: show_config_raw.rc == 0
 
     # -----------------------------------------------------------------------
-    # TASK 3: SHOW CONFIGURATION DETAIL (Fixed Hang)
+    # TASK 3: SHOW CONFIGURATION DETAIL
     # -----------------------------------------------------------------------
     - name: Run 'show configuration detail' via SSH
       ansible.builtin.shell: >-
-        printf "disable clipaging\nshow configuration detail\nexit\n" | 
+        timeout 300 
         sshpass -e 
-        ssh -tt 
+        ssh -T 
         -o HostKeyAlgorithms=+ssh-rsa 
         -o PubkeyAcceptedKeyTypes=+ssh-rsa 
         -o StrictHostKeyChecking=no 
         -o UserKnownHostsFile=/dev/null 
-        admin@{{ ansible_host }}
+        -o LogLevel=ERROR 
+        admin@{{ ansible_host }} 
+        "disable clipaging; show configuration detail"
       environment:
         SSHPASS: "{{ ansible_password }}"
       delegate_to: localhost
       register: show_detail_raw
+      ignore_errors: yes
 
     - name: Save 'show configuration detail' output
       ansible.builtin.copy:
         content: "{{ show_detail_raw.stdout }}"
         dest: "{{ backup_dir }}/show_config_detail_{{ timestamp }}.txt"
       delegate_to: localhost
+      when: show_detail_raw.rc == 0
