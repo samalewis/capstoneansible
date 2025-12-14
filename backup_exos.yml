@@ -1,4 +1,11 @@
 ---
+- name: Install sshpass if missing (idempotent)
+      ansible.builtin.package:
+        name: sshpass
+        state: present
+      become: yes
+      delegate_to: localhost
+
 - name: Backup EXOS switch primary.cfg via manual SCP and save show configuration
   hosts: exos_switches
   gather_facts: no
