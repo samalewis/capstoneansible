@@ -2,8 +2,6 @@
 - name: Backup EXOS switch primary.cfg and show configuration (Pure Shell)
   hosts: exos_switches
   gather_facts: no
-  # We do not use 'network_cli' because Paramiko is missing. 
-  # We treat this as a standard SSH task run from localhost.
   vars:
     # 1. HOST PATH MAPPING (Must match your docker-compose volumes)
     backup_dir: "/backups/{{ inventory_hostname }}"
@@ -30,8 +28,8 @@
     # TASK 1: SCP THE FILE (Already working)
     # -----------------------------------------------------------------------
     - name: Pull primary.cfg using SCP
-      ansible.builtin.command: >-
-        sshpass -p '{{ ansible_password }}'
+      ansible.builtin.shell: >-
+        sshpass -e 
         scp 
         -o HostKeyAlgorithms=+ssh-rsa
         -o PubkeyAcceptedKeyTypes=+ssh-rsa
@@ -39,8 +37,9 @@
         -o UserKnownHostsFile=/dev/null
         admin@{{ ansible_host }}:primary.cfg
         {{ backup_dir }}/primary_{{ timestamp }}.cfg
+      environment:
+        SSHPASS: "{{ ansible_password }}"
       delegate_to: localhost
-      no_log: true
       register: scp_result
 
     - name: Confirm SCP success
@@ -49,21 +48,21 @@
       when: scp_result.rc == 0
 
     # -----------------------------------------------------------------------
-    # TASK 2: SHOW CONFIGURATION (Replaced exos_command with SSH Shell)
-    # This combines 'disable clipaging' and the show command in one SSH session.
+    # TASK 2: SHOW CONFIGURATION (Pipe Method + TTY)
     # -----------------------------------------------------------------------
-    - name: Run 'show configuration' via SSH
+    - name: Run 'show configuration' via SSH (Pipe Method)
       ansible.builtin.shell: >-
-        sshpass -p '{{ ansible_password }}' 
-        ssh 
+        echo -e "disable clipaging\nshow configuration" | 
+        sshpass -e 
+        ssh -tt 
         -o HostKeyAlgorithms=+ssh-rsa 
         -o PubkeyAcceptedKeyTypes=+ssh-rsa 
         -o StrictHostKeyChecking=no 
         -o UserKnownHostsFile=/dev/null 
-        admin@{{ ansible_host }} 
-        "disable clipaging; show configuration"
+        admin@{{ ansible_host }}
+      environment:
+        SSHPASS: "{{ ansible_password }}"
       delegate_to: localhost
-      no_log: true # Hides password from logs
       register: show_config_raw
 
     - name: Save 'show configuration' output
@@ -75,18 +74,19 @@
     # -----------------------------------------------------------------------
     # TASK 3: SHOW CONFIGURATION DETAIL
     # -----------------------------------------------------------------------
-    - name: Run 'show configuration detail' via SSH
+    - name: Run 'show configuration detail' via SSH (Pipe Method)
       ansible.builtin.shell: >-
-        sshpass -p '{{ ansible_password }}' 
-        ssh 
+        echo -e "disable clipaging\nshow configuration detail" | 
+        sshpass -e 
+        ssh -tt 
         -o HostKeyAlgorithms=+ssh-rsa 
         -o PubkeyAcceptedKeyTypes=+ssh-rsa 
         -o StrictHostKeyChecking=no 
         -o UserKnownHostsFile=/dev/null 
-        admin@{{ ansible_host }} 
-        "disable clipaging; show configuration detail"
+        admin@{{ ansible_host }}
+      environment:
+        SSHPASS: "{{ ansible_password }}"
       delegate_to: localhost
-      no_log: true
       register: show_detail_raw
 
     - name: Save 'show configuration detail' output
