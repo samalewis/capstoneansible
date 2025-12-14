@@ -54,7 +54,7 @@
     # -----------------------------------------------------------------------
     - name: Run 'show configuration' via SSH
       ansible.builtin.shell: >-
-        printf "disable clipaging\nshow configuration\n" | 
+        printf "disable cli paging\nshow configuration\n" | 
         timeout 300 
         sshpass -e 
         ssh -T 
@@ -81,7 +81,7 @@
     # -----------------------------------------------------------------------
     - name: Run 'show configuration detail' via SSH
       ansible.builtin.shell: >-
-        printf "disable clipaging\nshow configuration detail\n" | 
+        printf "disable cli paging\nshow configuration detail\n" | 
         timeout 300 
         sshpass -e 
         ssh -T 
