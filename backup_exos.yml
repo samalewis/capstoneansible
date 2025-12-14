@@ -6,28 +6,17 @@
   vars:
     ansible_network_os: community.network.exos
     backup_dir: "./backups/{{ inventory_hostname }}"
-    primary_remote_path: "/usr/local/cfg/primary.cfg"  # Confirmed EXOS path
 
   tasks:
     - name: Get current timestamp on localhost
       ansible.builtin.setup:
         filter: ansible_date_time
       delegate_to: localhost
-      run_once: false
       register: local_facts
 
     - name: Set timestamp fact
       ansible.builtin.set_fact:
         timestamp: "{{ local_facts.ansible_facts.ansible_date_time.iso8601_basic_short }}"
-
-    - name: Verify config file (check if primary.cfg is selected)
-      community.network.exos_command:
-        commands: show switch
-      register: show_switch
-
-    - name: Display 'show switch' output
-      ansible.builtin.debug:
-        msg: "{{ show_switch.stdout_lines }}"
 
     - name: Create local backup directory
       ansible.builtin.file:
@@ -35,13 +24,12 @@
         state: directory
       delegate_to: localhost
 
-    - name: Copy primary.cfg from switch via SCP
+    - name: Fetch primary.cfg via SCP
       ansible.builtin.fetch:
         src: primary.cfg
         dest: "{{ backup_dir }}/primary_{{ timestamp }}.cfg"
         flat: yes
       delegate_to: localhost
-      ignore_errors: true  # To continue if file missing
 
     - name: Run 'show configuration' and save output
       community.network.exos_command:
@@ -54,7 +42,7 @@
         dest: "{{ backup_dir }}/show_config_{{ timestamp }}.txt"
       delegate_to: localhost
 
-    - name: Run 'show configuration detail' (more complete)
+    - name: Run 'show configuration detail' and save output
       community.network.exos_command:
         commands: show configuration detail
       register: show_config_detail
