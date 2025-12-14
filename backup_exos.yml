@@ -1,11 +1,12 @@
 ---
-- name: Backup EXOS switch primary.cfg via manual SCP and save show configuration
+- name: Backup EXOS switch primary.cfg and show configuration (Pure Shell)
   hosts: exos_switches
   gather_facts: no
-  connection: ansible.netcommon.network_cli
+  # We do not use 'network_cli' because Paramiko is missing. 
+  # We treat this as a standard SSH task run from localhost.
   vars:
-    ansible_network_os: community.network.exos
-    backup_dir: "./backups/{{ inventory_hostname }}"
+    # 1. HOST PATH MAPPING (Must match your docker-compose volumes)
+    backup_dir: "/backups/{{ inventory_hostname }}"
 
   tasks:
     - name: Get current timestamp on localhost
@@ -18,17 +19,20 @@
       ansible.builtin.set_fact:
         timestamp: "{{ local_facts.ansible_facts.ansible_date_time.iso8601_basic_short }}"
 
-    - name: Create local backup directory
+    - name: Create backup directory
       ansible.builtin.file:
         path: "{{ backup_dir }}"
         state: directory
-        mode: '0755'
+        mode: '0777'
       delegate_to: localhost
 
-    - name: Pull primary.cfg using SCP with sshpass (fully automated)
+    # -----------------------------------------------------------------------
+    # TASK 1: SCP THE FILE (Already working)
+    # -----------------------------------------------------------------------
+    - name: Pull primary.cfg using SCP
       ansible.builtin.command: >-
         sshpass -p '{{ ansible_password }}'
-        scp
+        scp 
         -o HostKeyAlgorithms=+ssh-rsa
         -o PubkeyAcceptedKeyTypes=+ssh-rsa
         -o StrictHostKeyChecking=no
@@ -41,35 +45,52 @@
 
     - name: Confirm SCP success
       ansible.builtin.debug:
-        msg: "primary.cfg successfully backed up!"
+        msg: "primary.cfg saved."
       when: scp_result.rc == 0
 
-    - name: Display SCP output (for troubleshooting)
-      ansible.builtin.debug:
-        msg:
-          - "Return Code: {{ scp_result.rc }}"
-          - "StdOut: {{ scp_result.stdout_lines }}"
-          - "StdErr: {{ scp_result.stderr_lines }}"
-      when: scp_result is defined and scp_result.rc != 0
+    # -----------------------------------------------------------------------
+    # TASK 2: SHOW CONFIGURATION (Replaced exos_command with SSH Shell)
+    # This combines 'disable clipaging' and the show command in one SSH session.
+    # -----------------------------------------------------------------------
+    - name: Run 'show configuration' via SSH
+      ansible.builtin.shell: >-
+        sshpass -p '{{ ansible_password }}' 
+        ssh 
+        -o HostKeyAlgorithms=+ssh-rsa 
+        -o PubkeyAcceptedKeyTypes=+ssh-rsa 
+        -o StrictHostKeyChecking=no 
+        -o UserKnownHostsFile=/dev/null 
+        admin@{{ ansible_host }} 
+        "disable clipaging; show configuration"
+      delegate_to: localhost
+      no_log: true # Hides password from logs
+      register: show_config_raw
 
-    - name: Run 'show configuration' and save output
-      community.network.exos_command:
-        commands: show configuration
-      register: show_config
-
-    - name: Save 'show configuration' output to file
+    - name: Save 'show configuration' output
       ansible.builtin.copy:
-        content: "{{ show_config.stdout[0] }}"
+        content: "{{ show_config_raw.stdout }}"
         dest: "{{ backup_dir }}/show_config_{{ timestamp }}.txt"
       delegate_to: localhost
 
-    - name: Run 'show configuration detail' and save output
-      community.network.exos_command:
-        commands: show configuration detail
-      register: show_config_detail
+    # -----------------------------------------------------------------------
+    # TASK 3: SHOW CONFIGURATION DETAIL
+    # -----------------------------------------------------------------------
+    - name: Run 'show configuration detail' via SSH
+      ansible.builtin.shell: >-
+        sshpass -p '{{ ansible_password }}' 
+        ssh 
+        -o HostKeyAlgorithms=+ssh-rsa 
+        -o PubkeyAcceptedKeyTypes=+ssh-rsa 
+        -o StrictHostKeyChecking=no 
+        -o UserKnownHostsFile=/dev/null 
+        admin@{{ ansible_host }} 
+        "disable clipaging; show configuration detail"
+      delegate_to: localhost
+      no_log: true
+      register: show_detail_raw
 
-    - name: Save 'show configuration detail' output to file
+    - name: Save 'show configuration detail' output
       ansible.builtin.copy:
-        content: "{{ show_config_detail.stdout[0] }}"
+        content: "{{ show_detail_raw.stdout }}"
         dest: "{{ backup_dir }}/show_config_detail_{{ timestamp }}.txt"
       delegate_to: localhost
