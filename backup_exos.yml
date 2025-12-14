@@ -1,5 +1,5 @@
 ---
-- name: Backup EXOS switch primary.cfg via SCP and save show configuration
+- name: Backup EXOS switch primary.cfg via manual SCP and save show configuration
   hosts: exos_switches
   gather_facts: no
   connection: ansible.netcommon.network_cli
@@ -24,12 +24,16 @@
         state: directory
       delegate_to: localhost
 
-    - name: Fetch primary.cfg via SCP
-      ansible.builtin.fetch:
-        src: /usr/local/cfg/primary.cfg
-        dest: "{{ backup_dir }}/primary_{{ timestamp }}.cfg"
-        flat: yes
+    - name: Pull primary.cfg using manual SCP command (proven to work)
+      ansible.builtin.command: >-
+        scp -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa
+        admin@{{ ansible_host }}:primary.cfg {{ backup_dir }}/primary_{{ timestamp }}.cfg
       delegate_to: localhost
+      register: scp_manual
+
+    - name: Display SCP output (for verification)
+      ansible.builtin.debug:
+        msg: "{{ scp_manual.stdout_lines + scp_manual.stderr_lines }}"
 
     - name: Run 'show configuration' and save output
       community.network.exos_command:
