@@ -1,0 +1,25 @@
+services:
+  semaphore:
+    image: my-custom-semaphore:latest
+    container_name: semaphore
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - SEMAPHORE_DB_DIALECT=bolt
+      - SEMAPHORE_ADMIN_PASSWORD=Password4224!
+      - SEMAPHORE_ADMIN_NAME=admin
+      - SEMAPHORE_ADMIN_EMAIL=info@apodacalab.com
+      - SEMAPHORE_ADMIN=admin
+    volumes:
+      # 1. PERSISTENT DATA (Database & Keys) - CRITICAL
+      # This saves your Projects, Inventory, Keys, and Users to your host.
+      - ./semaphore-data:/var/lib/semaphore
+
+      # 2. CONFIGURATION
+      # Saves your config.json so you don't have to re-setup every time.
+      - ./semaphore-config:/etc/semaphore
+
+      # 3. BACKUPS (Your EXOS Backup Location)
+      # This maps the folder inside the container to your host folder.
+      - /home/user/semaphore/exos_backups:/backups
