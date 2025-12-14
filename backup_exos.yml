@@ -48,11 +48,11 @@
       when: scp_result.rc == 0
 
     # -----------------------------------------------------------------------
-    # TASK 2: SHOW CONFIGURATION (Pipe Method + TTY)
+    # TASK 2: SHOW CONFIGURATION (Fixed Hang)
     # -----------------------------------------------------------------------
-    - name: Run 'show configuration' via SSH (Pipe Method)
+    - name: Run 'show configuration' via SSH
       ansible.builtin.shell: >-
-        echo -e "disable clipaging\nshow configuration" | 
+        printf "disable clipaging\nshow configuration\nexit\n" | 
         sshpass -e 
         ssh -tt 
         -o HostKeyAlgorithms=+ssh-rsa 
@@ -72,11 +72,11 @@
       delegate_to: localhost
 
     # -----------------------------------------------------------------------
-    # TASK 3: SHOW CONFIGURATION DETAIL
+    # TASK 3: SHOW CONFIGURATION DETAIL (Fixed Hang)
     # -----------------------------------------------------------------------
-    - name: Run 'show configuration detail' via SSH (Pipe Method)
+    - name: Run 'show configuration detail' via SSH
       ansible.builtin.shell: >-
-        echo -e "disable clipaging\nshow configuration detail" | 
+        printf "disable clipaging\nshow configuration detail\nexit\n" | 
         sshpass -e 
         ssh -tt 
         -o HostKeyAlgorithms=+ssh-rsa 
