@@ -36,7 +36,7 @@
         mode: '0755'
       delegate_to: localhost
 
-- name: Pull primary.cfg using SCP with sshpass (fully automated)
+     - name: Pull primary.cfg using SCP with sshpass (fully automated)
       ansible.builtin.command: >-
         sshpass -p '{{ ansible_ssh_password }}'
         scp 
