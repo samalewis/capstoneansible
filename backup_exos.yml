@@ -24,17 +24,20 @@
         state: directory
       delegate_to: localhost
 
-    - name: Pull primary.cfg using manual SCP command (proven to work)
+    - name: Pull primary.cfg using manual SCP with sshpass (automated password)
       ansible.builtin.command: >-
+        sshpass -p '{{ ansible_ssh_password }}'
         scp -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa
         admin@{{ ansible_host }}:primary.cfg {{ backup_dir }}/primary_{{ timestamp }}.cfg
       delegate_to: localhost
+      environment:
+        SSHPASS: '{{ ansible_ssh_password }}'  # Fallback if needed
       register: scp_manual
 
     - name: Display SCP output (for verification)
       ansible.builtin.debug:
         msg: "{{ scp_manual.stdout_lines + scp_manual.stderr_lines }}"
-
+        
     - name: Run 'show configuration' and save output
       community.network.exos_command:
         commands: show configuration
