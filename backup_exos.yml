@@ -1,4 +1,3 @@
-
 ---
 - name: Install sshpass if missing (idempotent)
   hosts: localhost
@@ -36,10 +35,10 @@
         mode: '0755'
       delegate_to: localhost
 
-     - name: Pull primary.cfg using SCP with sshpass (fully automated)
+    - name: Pull primary.cfg using SCP with sshpass (fully automated)
       ansible.builtin.command: >-
-        sshpass -p '{{ ansible_ssh_password }}'
-        scp 
+        sshpass -p '{{ ansible_password }}'
+        scp
         -o HostKeyAlgorithms=+ssh-rsa
         -o PubkeyAcceptedKeyTypes=+ssh-rsa
         -o StrictHostKeyChecking=no
@@ -57,7 +56,7 @@
 
     - name: Display SCP output (for troubleshooting)
       ansible.builtin.debug:
-        msg: 
+        msg:
           - "Return Code: {{ scp_result.rc }}"
           - "StdOut: {{ scp_result.stdout_lines }}"
           - "StdErr: {{ scp_result.stderr_lines }}"
