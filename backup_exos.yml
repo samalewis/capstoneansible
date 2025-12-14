@@ -3,7 +3,7 @@
   hosts: exos_switches
   gather_facts: no
   vars:
-    # 1. HOST PATH MAPPING (Must match your docker-compose volumes)
+    # 1. HOST PATH MAPPING
     backup_dir: "/backups/{{ inventory_hostname }}"
 
   tasks:
@@ -49,11 +49,12 @@
       when: scp_result.rc == 0
 
     # -----------------------------------------------------------------------
-    # TASK 2: SHOW CONFIGURATION (Non-Interactive Mode)
-    # Using -T to disable pseudo-tty prevents hangs.
+    # TASK 2: SHOW CONFIGURATION
+    # Fix: Pipe commands into stdin using printf (Simulates hitting Enter)
     # -----------------------------------------------------------------------
     - name: Run 'show configuration' via SSH
       ansible.builtin.shell: >-
+        printf "disable clipaging\nshow configuration\n" | 
         timeout 300 
         sshpass -e 
         ssh -T 
@@ -62,21 +63,11 @@
         -o StrictHostKeyChecking=no 
         -o UserKnownHostsFile=/dev/null 
         -o LogLevel=ERROR 
-        admin@{{ ansible_host }} 
-        "disable clipaging; show configuration"
+        admin@{{ ansible_host }}
       environment:
         SSHPASS: "{{ ansible_password }}"
       delegate_to: localhost
       register: show_config_raw
-      # Don't fail immediately if this doesn't work, so we can see the debug
-      ignore_errors: yes
-
-    - name: Debug Output (If Failed)
-      ansible.builtin.debug:
-        msg: 
-          - "Return Code: {{ show_config_raw.rc }}"
-          - "Error: {{ show_config_raw.stderr }}"
-      when: show_config_raw.rc != 0
 
     - name: Save 'show configuration' output
       ansible.builtin.copy:
@@ -90,6 +81,7 @@
     # -----------------------------------------------------------------------
     - name: Run 'show configuration detail' via SSH
       ansible.builtin.shell: >-
+        printf "disable clipaging\nshow configuration detail\n" | 
         timeout 300 
         sshpass -e 
         ssh -T 
@@ -98,13 +90,11 @@
         -o StrictHostKeyChecking=no 
         -o UserKnownHostsFile=/dev/null 
         -o LogLevel=ERROR 
-        admin@{{ ansible_host }} 
-        "disable clipaging; show configuration detail"
+        admin@{{ ansible_host }}
       environment:
         SSHPASS: "{{ ansible_password }}"
       delegate_to: localhost
       register: show_detail_raw
-      ignore_errors: yes
 
     - name: Save 'show configuration detail' output
       ansible.builtin.copy:
