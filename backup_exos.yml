@@ -1,14 +1,4 @@
 ---
-- name: Install sshpass if missing (idempotent)
-  hosts: localhost
-  become: yes
-  gather_facts: no
-  tasks:
-    - name: Ensure sshpass is installed
-      ansible.builtin.package:
-        name: sshpass
-        state: present
-
 - name: Backup EXOS switch primary.cfg via manual SCP and save show configuration
   hosts: exos_switches
   gather_facts: no
