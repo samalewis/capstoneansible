@@ -84,17 +84,3 @@
         content: "{{ show_config_detail.stdout[0] }}"
         dest: "{{ backup_dir }}/show_config_detail_{{ timestamp }}.txt"
       delegate_to: localhost
-Key Changes Explained
-
-Added SSH Flags: -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ensures the command never asks for confirmation, which is essential for automation in Semaphore.
-
-Fixed Variable Name: Changed scp_manual to scp_result in the debug task so it actually prints the output.
-
-Added Path: Changed source to /usr/local/cfg/primary.cfg to be explicit.
-
-Error Handling: The debug task now specifically prints the standard error (stderr_lines) if the return code is not 0, which helps you see exactly why SCP failed (e.g., "Permission denied", "Timeout", etc.).
-
-Google Search Suggestions
-Display of Search Suggestions is required when using Grounding with Google Search. Learn more
-extreme exos scp primary.cfg path
-ansible backup extreme exos switch primary.cfg
