@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# 1. Install 'expect' if it is missing (fixes 'spawn: command not found')
+# 1. Install 'expect' if it is missing
 if ! command -v expect &> /dev/null; then
     echo "Installing expect..."
-    # Detect package manager and install
     if [ -x "$(command -v apt-get)" ]; then
         sudo apt-get update && sudo apt-get install -y expect
     elif [ -x "$(command -v yum)" ]; then
@@ -13,15 +12,14 @@ if ! command -v expect &> /dev/null; then
     fi
 fi
 
-# 2. Create the Expect script dynamically
+# 2. Create the Expect script
 cat << 'EOF' > /tmp/deploy_banners.exp
 #!/usr/bin/expect -f
 
-set SWITCH_IP "192.168.1.202"
+set SWITCH_IP "10.1.200.3"
 set USERNAME "admin"
 set PASSWORD "" 
 
-# Define Banners
 set BEFORE_BANNER [list \
     "***********************************************************************" \
     "*                                                                     *" \
@@ -37,6 +35,8 @@ set BEFORE_BANNER [list \
     "***********************************************************************" \
 ]
 
+# Note: If these special characters look weird on the switch, change 
+# '╔' to '+' and '═' to '-'
 set AFTER_BANNER [list \
     "╔══════════════════════════════════════════════════════════════════════╗" \
     "║                 CAPSTONE LABS CORE SWITCH - CORE-02                  ║" \
@@ -48,7 +48,6 @@ set AFTER_BANNER [list \
 
 set timeout 30
 
-# Connect
 spawn ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa $USERNAME@$SWITCH_IP
 
 expect {
@@ -60,22 +59,33 @@ expect {
 # --- Deploy Before-Login Banner ---
 expect "#"
 send "configure banner before-login\r"
-# Wait for the prompt to enter text (usually just a newline or 'text')
 sleep 1
 foreach line $BEFORE_BANNER {
     send "$line\r"
 }
-# Send two carriage returns to finish the banner input
-send "\r\r"
+# Send ONE return to finish the last line of text
+send "\r"
+# Wait briefly to ensure the line is processed
+sleep 0.5
+# Send SECOND return to tell EXOS we are done with the banner
+send "\r"
+
+# CRITICAL FIX: Wait for the prompt specifically before moving on
 expect "#"
+# Sleep to flush any lingering newlines from the buffer
+sleep 2
 
 # --- Deploy After-Login Banner ---
 send "configure banner after-login\r"
-sleep 1
+# Wait specifically for the switch to enter input mode
+sleep 2
+
 foreach line $AFTER_BANNER {
     send "$line\r"
 }
-send "\r\r"
+send "\r"
+sleep 0.5
+send "\r"
 expect "#"
 
 # --- Save and Exit ---
@@ -86,7 +96,7 @@ expect "#"
 send "exit\r"
 EOF
 
-# 3. Execute the Expect script
+# 3. Execute
 chmod +x /tmp/deploy_banners.exp
 /usr/bin/expect -f /tmp/deploy_banners.exp
 
