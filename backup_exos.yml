@@ -26,7 +26,7 @@
 
     - name: Fetch primary.cfg via SCP
       ansible.builtin.fetch:
-        src: primary.cfg
+        src: /usr/local/cfg/primary.cfg
         dest: "{{ backup_dir }}/primary_{{ timestamp }}.cfg"
         flat: yes
       delegate_to: localhost
