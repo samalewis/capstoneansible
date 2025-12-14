@@ -16,7 +16,7 @@ fi
 cat << 'EOF' > /tmp/deploy_banners.exp
 #!/usr/bin/expect -f
 
-set SWITCH_IP "192.168.1.203"
+set SWITCH_IP "192.168.1.202"
 set USERNAME "admin"
 set PASSWORD "" 
 
