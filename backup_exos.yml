@@ -3,8 +3,8 @@
   hosts: exos_switches
   gather_facts: no
   vars:
-    # 1. HOST PATH MAPPING
-    backup_dir: "/backups/{{ inventory_hostname }}"
+    # Base path inside container (mapped to host)
+    backup_root: "/backups"
 
   tasks:
     - name: Get current timestamp on localhost
@@ -17,7 +17,11 @@
       ansible.builtin.set_fact:
         timestamp: "{{ local_facts.ansible_facts.ansible_date_time.iso8601_basic_short }}"
 
-    - name: Create backup directory
+    - name: Define run-specific backup directory
+      ansible.builtin.set_fact:
+        backup_dir: "{{ backup_root }}/{{ inventory_hostname }}/{{ timestamp }}"
+
+    - name: Create run-specific backup directory
       ansible.builtin.file:
         path: "{{ backup_dir }}"
         state: directory
@@ -37,7 +41,7 @@
         -o UserKnownHostsFile=/dev/null
         -o LogLevel=ERROR
         admin@{{ ansible_host }}:primary.cfg
-        {{ backup_dir }}/primary_{{ timestamp }}.cfg
+        {{ backup_dir }}/primary.cfg
       environment:
         SSHPASS: "{{ ansible_password }}"
       delegate_to: localhost
@@ -45,12 +49,11 @@
 
     - name: Confirm SCP success
       ansible.builtin.debug:
-        msg: "primary.cfg saved."
+        msg: "primary.cfg saved to {{ backup_dir }}/"
       when: scp_result.rc == 0
 
     # -----------------------------------------------------------------------
     # TASK 2: SHOW CONFIGURATION
-    # Fix: Pipe commands into stdin using printf (Simulates hitting Enter)
     # -----------------------------------------------------------------------
     - name: Run 'show configuration' via SSH
       ansible.builtin.shell: >-
@@ -72,7 +75,7 @@
     - name: Save 'show configuration' output
       ansible.builtin.copy:
         content: "{{ show_config_raw.stdout }}"
-        dest: "{{ backup_dir }}/show_config_{{ timestamp }}.txt"
+        dest: "{{ backup_dir }}/show_configuration.txt"
       delegate_to: localhost
       when: show_config_raw.rc == 0
 
@@ -99,6 +102,6 @@
     - name: Save 'show configuration detail' output
       ansible.builtin.copy:
         content: "{{ show_detail_raw.stdout }}"
-        dest: "{{ backup_dir }}/show_config_detail_{{ timestamp }}.txt"
+        dest: "{{ backup_dir }}/show_configuration_detail.txt"
       delegate_to: localhost
       when: show_detail_raw.rc == 0
