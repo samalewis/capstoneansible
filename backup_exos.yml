@@ -24,15 +24,21 @@
         state: directory
       delegate_to: localhost
 
-    - name: Pull primary.cfg using manual SCP with sshpass (automated password)
+    - name: Pull primary.cfg using SCP with sshpass (fully automated)
       ansible.builtin.command: >-
         sshpass -p '{{ ansible_ssh_password }}'
-        scp -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa
-        admin@{{ ansible_host }}:primary.cfg {{ backup_dir }}/primary_{{ timestamp }}.cfg
+        scp -o HostKeyAlgorithms=+ssh-rsa
+        -o PubkeyAcceptedKeyTypes=+ssh-rsa
+        admin@{{ ansible_host }}:primary.cfg
+        {{ backup_dir }}/primary_{{ timestamp }}.cfg
       delegate_to: localhost
-      environment:
-        SSHPASS: '{{ ansible_ssh_password }}'  # Fallback if needed
-      register: scp_manual
+      no_log: true
+      register: scp_result
+
+    - name: Confirm success
+      ansible.builtin.debug:
+        msg: "primary.cfg successfully backed up!"
+      when: scp_result.rc == 0
 
     - name: Display SCP output (for verification)
       ansible.builtin.debug:
