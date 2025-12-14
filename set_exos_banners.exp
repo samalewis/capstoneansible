@@ -1,0 +1,70 @@
+#!/usr/bin/expect -f
+
+set SWITCH_IP "10.1.200.3"
+set USERNAME "admin"
+set PASSWORD ""
+
+set BEFORE_BANNER [list \
+    "***********************************************************************" \
+    "*                                                                     *" \
+    "*  WARNING: UNAUTHORIZED ACCESS IS PROHIBITED                         *" \
+    "*                                                                     *" \
+    "*  This system is property of Capstone Labs. All activity is          *" \
+    "*  monitored and logged. Unauthorized use is a violation of federal  *" \
+    "*  and state laws (18 USC 1030, etc.) and may result in criminal      *" \
+    "*  prosecution.                                                       *" \
+    "*                                                                     *" \
+    "*  By continuing, you acknowledge acceptance of our Acceptable Use    *" \
+    "*  Policy and consent to monitoring.                                  *" \
+    "*                                                                     *" \
+    "*  https://capstonelabs.net/security-policy                           *" \
+    "*                                                                     *" \
+    "***********************************************************************" \
+]
+
+set AFTER_BANNER [list \
+    "╔══════════════════════════════════════════════════════════════════════╗" \
+    "║                 CAPSTONE LABS CORE SWITCH - CORE-02                  ║" \
+    "╠══════════════════════════════════════════════════════════════════════╣" \
+    "║  Unauthorized changes are strictly prohibited.                       ║" \
+    "║  All configuration changes must be approved and documented.          ║" \
+    "║  This device is actively monitored. Save your work!                  ║" \
+    "╚══════════════════════════════════════════════════════════════════════╝" \
+]
+
+set timeout 30
+
+spawn ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa $USERNAME@$SWITCH_IP
+
+expect {
+  "password:" { send "$PASSWORD\r" }
+  "#" { }
+  timeout { puts "Timeout"; exit 1 }
+}
+
+expect "#"
+send "configure banner before-login\r"
+foreach line $BEFORE_BANNER {
+    send "$line\r"
+}
+send "\r"
+send "\r"
+expect "#"
+
+send "configure banner after-login\r"
+foreach line $AFTER_BANNER {
+    send "$line\r"
+}
+send "\r"
+send "\r"
+expect "#"
+
+send "save configuration\r"
+expect "save"
+send "y\r"
+expect "#"
+send "exit\r"
+
+puts "\nProfessional banners deployed on Core-02!"
+puts "Before-login: scary legal warning"
+puts "After-login: ASCII art + MOTD"
