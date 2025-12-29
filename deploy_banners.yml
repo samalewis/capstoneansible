@@ -4,44 +4,48 @@
   gather_facts: no
   vars:
     ansible_user: admin
-    # It is best practice to store passwords in Semaphore Secrets, not plain text
-    ansible_password: "" 
+    ansible_password: ""  # Better: use secrets/vault
     ansible_network_os: community.network.exos
-    
+    ansible_connection: network_cli
+
   tasks:
     - name: Configure Before-Login Banner
-      community.network.exos_banner:
-        banner: before-login
-        text: |
-          ***********************************************************************
-          *                                                                     *
-          *  WARNING: UNAUTHORIZED ACCESS IS PROHIBITED                         *
-          *                                                                     *
-          *  This system is property of Capstone Labs. All activity is          *
-          *  monitored and logged. Unauthorized use is a violation of federal   *
-          *  and state laws (18 USC 1030, etc.) and may result in criminal      *
-          *  prosecution.                                                       *
-          *                                                                     *
-          *  By continuing, you acknowledge acceptance of our Acceptable Use    *
-          *  Policy and consent to monitoring.                                  *
-          *                                                                     *
-          *  https://capstonelabs.net/security-policy                           *
-          *                                                                     *
-          ***********************************************************************
-        state: present
+      community.network.exos_command:
+        commands:
+          - configure banner before-login
+          - |
+            ***********************************************************************
+            *                                                                     *
+            *   WARNING: UNAUTHORIZED ACCESS IS PROHIBITED                        *
+            *                                                                     *
+            *   This system is property of Capstone Labs. All activity is         *
+            *   monitored and logged. Unauthorized use is a violation of federal  *
+            *   and state laws (18 USC 1030, etc.) and may result in criminal     *
+            *   prosecution.                                                      *
+            *                                                                     *
+            *   By continuing, you acknowledge acceptance of our Acceptable Use   *
+            *   Policy and consent to monitoring.                                 *
+            *                                                                     *
+            *   https://capstonelabs.net/security-policy                          *
+            *                                                                     *
+            ***********************************************************************
+            
+            # Note: The trailing blank lines (two newlines) terminate the input
 
     - name: Configure After-Login Banner
-      community.network.exos_banner:
-        banner: after-login
-        text: |
-          ╔══════════════════════════════════════════════════════════════════════╗
-          ║                 CAPSTONE LABS CORE SWITCH - CORE-02                  ║
-          ╠══════════════════════════════════════════════════════════════════════╣
-          ║  Unauthorized changes are strictly prohibited.                       ║
-          ║  All configuration changes must be approved and documented.          ║
-          ║  This device is actively monitored. Save your work!                  ║
-          ╚══════════════════════════════════════════════════════════════════════╝
-        state: present
+      community.network.exos_command:
+        commands:
+          - configure banner after-login
+          - |
+            ╔══════════════════════════════════════════════════════════════════════╗
+            ║                        CAPSTONE LABS EXOS SWITCH                     ║
+            ╠══════════════════════════════════════════════════════════════════════╣
+            ║          Unauthorized changes are strictly prohibited.               ║
+            ║          All configuration changes must be approved and documented.  ║
+            ║           This device is actively monitored. Save your work!         ║
+            ╚══════════════════════════════════════════════════════════════════════╝
+            
+            # Trailing blank lines to terminate
 
     - name: Save configuration
       community.network.exos_config:
