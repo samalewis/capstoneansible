@@ -22,7 +22,7 @@ vars:
 
   after_banner: |
     +======================================================================+
-    |                  CAPSTONE LABS CORE SWITCH - CORE-02                 |
+    |                  CAPSTONE LABS EXOS SWITCH                           |
     +======================================================================+
     | Unauthorized changes are strictly prohibited.                        |
     | All configuration changes must be approved and documented.           |
