@@ -2,7 +2,6 @@
 - name: Backup EXOS switch primary.cfg and show configuration (Pure Shell)
   hosts: exos_switches
   gather_facts: no
-  become: yes
   vars:
     # Base path inside container (mapped to host)
     backup_root: "/backups"
