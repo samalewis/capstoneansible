@@ -1,50 +1,52 @@
-vars:
-  ansible_password: ""  # Blank as before
-  # ... other vars ...
+---
+- name: Deploy EXOS Banners using proven SSH + sshpass method
+  hosts: exos_switches
+  gather_facts: no
+  vars:
+    ansible_password: ""  # Ensure this is blank as in your setup
+    before_banner: |
+      ***********************************************************************
+      *                                                                     *
+      *   WARNING: UNAUTHORIZED ACCESS IS PROHIBITED                        *
+      *                                                                     *
+      *   This system is property of Capstone Labs. All activity is         *
+      *   monitored and logged. Unauthorized use is a violation of federal  *
+      *   and state laws (18 USC 1030, etc.) and may result in criminal     *
+      *   prosecution.                                                      *
+      *                                                                     *
+      *   By continuing, you acknowledge acceptance of our Acceptable Use   *
+      *   Policy and consent to monitoring.                                 *
+      *                                                                     *
+      *   https://capstonelabs.net/security-policy                          *
+      *                                                                     *
+      ***********************************************************************
+      
 
-  before_banner: |
-    ***********************************************************************
-    *                                                                     *
-    *   WARNING: UNAUTHORIZED ACCESS IS PROHIBITED                        *
-    *                                                                     *
-    *   This system is property of Capstone Labs. All activity is         *
-    *   monitored and logged. Unauthorized use is a violation of federal  *
-    *   and state laws (18 USC 1030, etc.) and may result in criminal     *
-    *   prosecution.                                                      *
-    *                                                                     *
-    *   By continuing, you acknowledge acceptance of our Acceptable Use   *
-    *   Policy and consent to monitoring.                                 *
-    *                                                                     *
-    *   https://capstonelabs.net/security-policy                          *
-    *                                                                     *
-    ***********************************************************************
-    
+    after_banner: |
+      +======================================================================+
+      |                      CAPSTONE LABS CORE SWITCH                       |
+      +======================================================================+
+      | Unauthorized changes are strictly prohibited.                        |
+      | All configuration changes must be approved and documented.           |
+      | This device is actively monitored. Save your work!                   |
+      +======================================================================+
+      
 
-  after_banner: |
-    +======================================================================+
-    |                  CAPSTONE LABS EXOS SWITCH                           |
-    +======================================================================+
-    | Unauthorized changes are strictly prohibited.                        |
-    | All configuration changes must be approved and documented.           |
-    | This device is actively monitored. Save your work!                   |
-    +======================================================================+
-    
+  tasks:
+    - name: Deploy banners and save config via SSH (paste method)
+      ansible.builtin.shell: |
+        printf "disable clipaging\nconfigure banner before-login\n{{ before_banner }}\n\nconfigure banner after-login\n{{ after_banner }}\n\nsave configuration\ny\n" |
+        sshpass -e ssh -T \
+          -o StrictHostKeyChecking=no \
+          -o HostKeyAlgorithms=+ssh-rsa \
+          -o PubkeyAcceptedKeyTypes=+ssh-rsa \
+          -o UserKnownHostsFile=/dev/null \
+          admin@{{ ansible_host }}
+      environment:
+        SSHPASS: "{{ ansible_password }}"
+      register: banner_result
+      changed_when: true
 
-tasks:
-  - name: Deploy banners and save config via SSH (paste method)
-    ansible.builtin.shell: |
-      printf "disable clipaging\nconfigure banner before-login\n{{ before_banner }}\n\nconfigure banner after-login\n{{ after_banner }}\n\nsave configuration\ny\n" |
-      sshpass -e ssh -T \
-        -o StrictHostKeyChecking=no \
-        -o HostKeyAlgorithms=+ssh-rsa \
-        -o PubkeyAcceptedKeyTypes=+ssh-rsa \
-        -o UserKnownHostsFile=/dev/null \
-        admin@{{ ansible_host }}
-    environment:
-      SSHPASS: "{{ ansible_password }}"
-    register: banner_result
-    changed_when: true  # Since it's not fully idempotent yet
-
-  - name: Display result
-    ansible.builtin.debug:
-      var: banner_result.stdout_lines
+    - name: Display result (for debugging)
+      ansible.builtin.debug:
+        var: banner_result.stdout_lines
