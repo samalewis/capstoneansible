@@ -8,7 +8,7 @@
   tasks:
     - name: Remove both banners and save config
       ansible.builtin.shell: |
-        printf "disable clipaging\nconfigure banner before-login none\nconfigure banner after-login none\nsave configuration\ny\n" |
+        printf "disable clipaging\nunconfigure banner before-login\nunconfigure banner after-login\nsave configuration\ny\n" |
         sshpass -e ssh -T \
           -o StrictHostKeyChecking=no \
           -o HostKeyAlgorithms=+ssh-rsa \
