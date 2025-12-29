@@ -1,0 +1,25 @@
+---
+- name: Remove EXOS Banners
+  hosts: exos_switches
+  gather_facts: no
+  vars:
+    ansible_password: ""  # Blank password as before
+
+  tasks:
+    - name: Remove both banners and save config
+      ansible.builtin.shell: |
+        printf "disable clipaging\nconfigure banner before-login none\nconfigure banner after-login none\nsave configuration\ny\n" |
+        sshpass -e ssh -T \
+          -o StrictHostKeyChecking=no \
+          -o HostKeyAlgorithms=+ssh-rsa \
+          -o PubkeyAcceptedKeyTypes=+ssh-rsa \
+          -o UserKnownHostsFile=/dev/null \
+          admin@{{ ansible_host }}
+      environment:
+        SSHPASS: "{{ ansible_password }}"
+      register: remove_result
+      changed_when: true
+
+    - name: Display result (for debugging)
+      ansible.builtin.debug:
+        var: remove_result.stdout_lines
