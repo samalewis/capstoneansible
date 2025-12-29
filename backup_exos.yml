@@ -3,8 +3,6 @@
   hosts: exos_switches
   gather_facts: no
   become: yes
-  become_method: su
-  become_flags: '-'
   vars:
     # Base path inside container (mapped to host)
     backup_root: "/backups"
