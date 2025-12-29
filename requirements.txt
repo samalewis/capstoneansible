@@ -1,2 +1,2 @@
 netmiko
-ansible-pylibssh
+paramiko
