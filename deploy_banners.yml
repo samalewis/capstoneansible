@@ -24,7 +24,7 @@
 
     after_banner: |
       +======================================================================+
-      |                  CAPSTONE LABS - {{ inventory_hostname }}            |
+      |                  CAPSTONE LABS - {{ inventory_hostname }}                    |
       +======================================================================+
       | Unauthorized changes are strictly prohibited.                        |
       | All configuration changes must be approved and documented.           |
