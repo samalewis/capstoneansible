@@ -22,31 +22,33 @@
       ***********************************************************************
       
 
-    after_banner: |
-      +======================================================================+
-      |                      CAPSTONE LABS CORE SWITCH                       |
-      +======================================================================+
-      | Unauthorized changes are strictly prohibited.                        |
-      | All configuration changes must be approved and documented.           |
-      | This device is actively monitored. Save your work!                   |
-      +======================================================================+
-      
+vars:
+  # ... your before_banner stays the same ...
 
-  tasks:
-    - name: Deploy banners and save config via SSH (paste method)
-      ansible.builtin.shell: |
-        printf "disable clipaging\nconfigure banner before-login\n{{ before_banner }}\n\nconfigure banner after-login\n{{ after_banner }}\n\nsave configuration\ny\n" |
-        sshpass -e ssh -T \
-          -o StrictHostKeyChecking=no \
-          -o HostKeyAlgorithms=+ssh-rsa \
-          -o PubkeyAcceptedKeyTypes=+ssh-rsa \
-          -o UserKnownHostsFile=/dev/null \
-          admin@{{ ansible_host }}
-      environment:
-        SSHPASS: "{{ ansible_password }}"
-      register: banner_result
-      changed_when: true
+  after_banner: |
+    +======================================================================+
+    |                  CAPSTONE LABS - {{ inventory_hostname }}            |
+    +======================================================================+
+    | Unauthorized changes are strictly prohibited.                        |
+    | All configuration changes must be approved and documented.           |
+    | This device is actively monitored. Save your work!                   |
+    +======================================================================+
+    
 
+tasks:
+  - name: Deploy banners and save config via SSH (paste method)
+    ansible.builtin.shell: |
+      printf "disable clipaging\nconfigure banner before-login\n{{ before_banner }}\n\nconfigure banner after-login\n{{ after_banner }}\n\nsave configuration\ny\n" |
+      sshpass -e ssh -T \
+        -o StrictHostKeyChecking=no \
+        -o HostKeyAlgorithms=+ssh-rsa \
+        -o PubkeyAcceptedKeyTypes=+ssh-rsa \
+        -o UserKnownHostsFile=/dev/null \
+        admin@{{ ansible_host }}
+    environment:
+      SSHPASS: "{{ ansible_password }}"
+    register: banner_result
+    changed_when: true
     - name: Display result (for debugging)
       ansible.builtin.debug:
         var: banner_result.stdout_lines
