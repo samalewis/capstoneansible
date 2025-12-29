@@ -26,6 +26,7 @@
         path: "{{ backup_dir }}"
         state: directory
         mode: '0777'
+      become: yes
       delegate_to: localhost
 
     # -----------------------------------------------------------------------
