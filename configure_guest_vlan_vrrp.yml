@@ -1,95 +1,58 @@
 ---
-- name: Configure Guest VLAN 40 with VRRP and guestacl.pol on EXOS Cores
+- name: Configure Guest VLAN 40 with VRRP and guestacl.pol using raw SSH
   hosts: exos_switches
-  gather_facts: false
-  collections:
-    - extreme.exos.exos
-
+  gather_facts: no
   vars:
     vlan_name: "Guest"
     vlan_tag: 40
     vrrp_vrid: 40
     vrrp_vip: "10.1.40.1"
     policy_file: "guestacl.pol"
+    isc_ports: "2,3,4,5"   # Your MLAG/ISC ports
     dhcp_relay_servers:
       - "10.1.200.4"
       - "10.1.200.5"
-    isc_ports: "2,3,4,5"   # Confirmed from your XML configs
 
   tasks:
+    - name: Deploy Guest VLAN configuration via SSH pipe
+      ansible.builtin.shell: |
+        printf "
+        create vlan {{ vlan_name }} tag {{ vlan_tag }}\n
+        configure vlan {{ vlan_name }} description \"Guest-VLAN 40\"\n
+        configure vlan {{ vlan_name }} add ports {{ isc_ports }} tagged\n
+        {% if inventory_hostname == 'Core-01A' %}
+        configure vlan {{ vlan_name }} add ipaddress 10.1.40.2/24\n
+        {% elif inventory_hostname == 'Core-02A' %}
+        configure vlan {{ vlan_name }} add ipaddress 10.1.40.3/24\n
+        {% endif %}
+        create vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }}\n
+        {% if inventory_hostname == 'Core-01A' %}
+        configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} vrid-priority 200\n
+        {% else %}
+        configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} vrid-priority 100\n
+        {% endif %}
+        configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} advertise-interval 1\n
+        configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} accept-mode off\n
+        configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} ipaddress {{ vrrp_vip }}\n
+        enable vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }}\n
+        {% for server in dhcp_relay_servers %}
+        configure vlan {{ vlan_name }} ipaddress dhcp-relay add {{ server }}\n
+        {% endfor %}
+        refresh policy {{ policy_file }}\n
+        configure access-list {{ policy_file }} vlan {{ vlan_name }} ingress\n
+        save configuration\ny\n
+        " | 
+        sshpass -e ssh -T \
+          -o StrictHostKeyChecking=no \
+          -o HostKeyAlgorithms=+ssh-rsa \
+          -o PubkeyAcceptedKeyTypes=+ssh-rsa \
+          -o UserKnownHostsFile=/dev/null \
+          admin@{{ ansible_host }}
+      environment:
+        SSHPASS: "{{ ansible_password }}"
+      register: config_result
+      changed_when: true
 
-    - name: Create VLAN Guest
-      extreme.exos.exos_vlans:
-        name: "{{ vlan_name }}"
-        vlanid: "{{ vlan_tag }}"
-        description: "Guest-VLAN 40"
-        state: present
-
-    - name: Add VLAN Guest tagged to ISC/MLAG ports 2-5
-      extreme.exos.exos_config:
-        lines:
-          - "configure vlan {{ vlan_name }} add ports {{ isc_ports }} tagged"
-
-    - name: Configure L3 IP on Core-01A
-      extreme.exos.exos_l3_interfaces:
-        name: "{{ vlan_name }}"
-        ipv4:
-          - address: "10.1.40.2/24"
-        state: present
-      when: inventory_hostname == "Core-01A"
-
-    - name: Configure L3 IP on Core-02A
-      extreme.exos.exos_l3_interfaces:
-        name: "{{ vlan_name }}"
-        ipv4:
-          - address: "10.1.40.3/24"
-        state: present
-      when: inventory_hostname == "Core-02A"
-
-    - name: Create VRRP instance
-      extreme.exos.exos_vrrp:
-        vlan: "{{ vlan_name }}"
-        vrid: "{{ vrrp_vrid }}"
-        state: present
-
-    - name: Configure VRRP details on Core-01A (Primary)
-      extreme.exos.exos_command:
-        commands:
-          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} vrid-priority 200"
-          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} advertise-interval 1"
-          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} accept-mode off"
-          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} ipaddress {{ vrrp_vip }}"
-          - "enable vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }}"
-      when: inventory_hostname == "Core-01A"
-
-    - name: Configure VRRP details on Core-02A (Backup)
-      extreme.exos.exos_command:
-        commands:
-          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} vrid-priority 100"
-          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} advertise-interval 1"
-          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} accept-mode off"
-          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} ipaddress {{ vrrp_vip }}"
-          - "enable vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }}"
-      when: inventory_hostname == "Core-02A"
-
-    - name: Add DHCP relay helpers
-      extreme.exos.exos_command:
-        commands:
-          - "configure vlan {{ vlan_name }} ipaddress dhcp-relay add {{ item }}"
-      loop: "{{ dhcp_relay_servers }}"
-
-    - name: Refresh guestacl.pol policy
-      extreme.exos.exos_command:
-        commands:
-          - "refresh policy {{ policy_file }}"
-
-    - name: Apply guestacl.pol ingress on VLAN Guest
-      extreme.exos.exos_config:
-        lines:
-          - "configure access-list {{ policy_file }} vlan {{ vlan_name }} ingress"
-        save_when: changed
-
-    - name: Save configuration
-      extreme.exos.exos_command:
-        commands:
-          - "save configuration"
+    - name: Display output for debugging
+      ansible.builtin.debug:
+        var: config_result.stdout_lines
