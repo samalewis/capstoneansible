@@ -1,0 +1,89 @@
+---
+- name: Configure Guest VLAN 40 with VRRP and Isolation ACL on EXOS Core Switches
+  hosts: core_switches
+  gather_facts: false
+  collections:
+    - extreme.exos.exos
+
+  vars:
+    vlan_name: "Guest"
+    vlan_tag: 40
+    vrrp_vrid: 40
+    vrrp_vip: "10.1.40.1"
+    policy_file: "guestacl.pol"          # <-- Updated filename
+    dhcp_relay_servers:
+      - "10.1.200.4"
+      - "10.1.200.5"
+
+  tasks:
+
+    - name: Create VLAN Guest (idempotent)
+      extreme.exos.exos_vlans:
+        name: "{{ vlan_name }}"
+        vlanid: "{{ vlan_tag }}"
+        description: "Guest-VLAN 40"
+        state: present
+
+    - name: Assign primary IP to Core-01A
+      extreme.exos.exos_l3_interfaces:
+        name: "{{ vlan_name }}"
+        ipv4:
+          - address: "10.1.40.2/24"
+        state: present
+      when: inventory_hostname == "Core-01A"
+
+    - name: Assign backup IP to Core-02A
+      extreme.exos.exos_l3_interfaces:
+        name: "{{ vlan_name }}"
+        ipv4:
+          - address: "10.1.40.3/24"
+        state: present
+      when: inventory_hostname == "Core-02A"
+
+    - name: Create VRRP instance
+      extreme.exos.exos_vrrp:
+        vlan: "{{ vlan_name }}"
+        vrid: "{{ vrrp_vrid }}"
+        state: present
+
+    - name: Configure VRRP parameters on Core-01A (Primary)
+      extreme.exos.exos_command:
+        commands:
+          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} vrid-priority 200"
+          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} advertise-interval 1"
+          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} accept-mode off"
+          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} ipaddress {{ vrrp_vip }}"
+          - "enable vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }}"
+      when: inventory_hostname == "Core-01A"
+
+    - name: Configure VRRP parameters on Core-02A (Backup)
+      extreme.exos.exos_command:
+        commands:
+          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} vrid-priority 100"
+          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} advertise-interval 1"
+          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} accept-mode off"
+          - "configure vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }} ipaddress {{ vrrp_vip }}"
+          - "enable vrrp vlan {{ vlan_name }} vrid {{ vrrp_vrid }}"
+      when: inventory_hostname == "Core-02A"
+
+    - name: Configure DHCP relay on VLAN Guest
+      extreme.exos.exos_command:
+        commands:
+          - "configure vlan {{ vlan_name }} ipaddress dhcp-relay add {{ item }}"
+      loop: "{{ dhcp_relay_servers }}"
+
+    - name: Refresh the actual policy file guestacl.pol
+      extreme.exos.exos_command:
+        commands:
+          - "refresh policy {{ policy_file }}"
+
+    - name: Apply isolation ACL ingress on VLAN Guest
+      extreme.exos.exos_config:
+        lines:
+          - "configure access-list {{ policy_file }} vlan {{ vlan_name }} ingress"
+        save_when: changed
+
+    - name: Save configuration
+      extreme.exos.exos_command:
+        commands:
+          - "save configuration"
